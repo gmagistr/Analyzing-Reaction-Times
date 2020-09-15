@@ -1,0 +1,61 @@
+---
+title: "Grammaticality judgement in Italian"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Reaction Times
+First of all, I would load the tidyverse packages. 
+``` {r reaction_times}
+library(tidyverse)
+library(colr)
+```
+
+Let's load the database. It has already undergone a tidying process, i.e. deleting any row containing NA values. Let's delete the columns for the values that are not relevant for us. 
+
+
+```{r reaction_times}
+log_reaction_time <- select(reaction_times, -Gender, -Age, -Education, -occupation, -Origin, -genitori, -L1, -dialect, -dialectcon, -Practice, -participant, -TIME_start, -TIME_end )
+```
+Okay, now we study the distribution of every item. Let's log-transform it. (cf. Winter, Baayen)
+```{r reaction_times}
+log_reaction_time <- mutate_all(log_reaction_time, log10)
+```
+
+Let's remove outliers. According to Baayen it is advisable to remove outliers falling within two times the standard deviation plus or minus the mean of the distribution. 
+```{r log_reaction_time}
+find_outlier <- function(log_reaction_time) {
+    media <- mean(log_reaction_time)
+    devst <- sd(log_reaction_time)
+    result <-which(log_reaction_time < media - 2 * devst | log_reaction_time > media + 2 * devst)
+     log_reaction_time[result] <- NA
+  return(log_reaction_time)
+  
+}
+log_RT_out <- apply(log_reaction_time, 2, find_outlier)
+```
+In this way, I get the outlier for every column. I inspect them and evaluate if it is the case to take them out. Row 33 has almost always spotted as outlier, I would take it out.
+``` 
+log_RT_out<- log_RT_out[-33,]
+```
+In order to manipulate the table, I change it into a tibble. 
+```
+log_RT_out <- as.tibble(log_RT_out)
+```
+
+Let's extract all the value for the semantic conditions and transform them into vector. 
+```
+Narrow <- c(cgrep(log_RT_out, "^C[TVDC]E")
+Broad <- c(cgrep(log_RT_out, "^C[TVDC]F")
+Intransitive <- c(cgrep(log_RT_out, "^C[TVDC]I")
+Narrow <-as.vector(unlist(Narrow))
+Broad <-as.vector(unlist(Broad))
+Intransitive <-as.vector((Intransitive))
+
+
+t.test(Narrow, Broad, alternative = "less")
+ t.test(Narrow, Intransitive, alternative = "two.sided")
+
